@@ -1,4 +1,4 @@
-# 🎬 Movie Finder
+[# 🎬 Movie Finder
 
 A dynamic web application that allows users to search, filter, and explore movies and TV shows using real-time data from a public API.
 
@@ -88,7 +88,7 @@ movie-finder/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Achintya-sh/movie-finder.git
+   git clone https://github.com/Achintya-sh/movie-finder-app.git
    cd movie-finder
    ```
 
@@ -153,3 +153,4 @@ This project is created for educational purposes.
 **Developed with ❤️ as part of Web Development Project**
 
 *Last Updated: March 23, 2026*
+](https://github.com/Achintya-sh/movie-finder-app)
