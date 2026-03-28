@@ -1,0 +1,19 @@
+:root {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #141414;
+    --bg-card: #1f1f1f;
+    --accent-primary: #e50914;
+    --text-primary: #ffffff;
+    --text-secondary: #b3b3b3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.navbar { padding: 1.5rem 2rem; background: rgba(10,10,10,0.9); }
+.logo { color: var(--accent-primary); font-size: 1.5rem; font-weight: 800; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
