@@ -1,18 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Finder - Discover Your Next Favorite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 </head>
+
 <body class="bg-dark">
+
     <!-- Navigation Bar -->
     <nav class="navbar">
-        <div class="container">
-            <h1 class="logo">MOVIEFINDER</h1>
+        <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+                <h1 class="logo">MOVIEFINDER</h1>
+                <div class="nav-links">
+                    <a href="#" class="nav-link active">Home</a>
+                    <a href="#" class="nav-link">Movies</a>
+                    <a href="#" class="nav-link">TV Shows</a>
+                    <a href="#" class="nav-link">My List</a>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="themeToggle" class="theme-toggle">
+                    <svg class="sun-icon" width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
+                    </svg>
+                    <svg class="moon-icon hidden" width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                    </svg>
+                </button>
+                <div class="profile-icon">A</div>
+            </div>
         </div>
     </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h2 class="hero-title">Featured Movie</h2>
+                <div class="hero-meta">
+                    <span class="match-score">98% Match</span>
+                    <span>2024</span>
+                    <span class="quality-badge">4K</span>
+                </div>
+                <p class="hero-description">
+                    Discover thousands of movies and TV shows. Search, filter, and explore your next favorite
+                    entertainment.
+                </p>
+                <div class="hero-buttons">
+                    <button class="btn-play">
+                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                        Play
+                    </button>
+                    <button class="btn-info">
+                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                        </svg>
+                        More Info
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="hero-fade"></div>
+    </section>
+
+    <!-- Search & Filters Section -->
+    <section class="search-section">
+        <div class="container mx-auto px-6">
+            <div class="search-container">
+                <div class="search-wrapper">
+                    <svg class="search-icon" width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search for movies, TV shows..."
+                        class="search-input">
+                </div>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <select id="typeFilter" class="filter-select">
+                        <option value="all">All Types</option>
+                        <option value="movie">Movies</option>
+                        <option value="series">TV Series</option>
+                    </select>
+
+                    <input type="number" id="yearFilter" placeholder="Year" class="filter-input">
+
+                    <div class="sort-buttons">
+                        <button id="sortAZ" class="sort-btn" title="A-Z">A→Z</button>
+                        <button id="sortZA" class="sort-btn" title="Z-A">Z→A</button>
+                        <button id="sortYearNew" class="sort-btn" title="Newest">📅↓</button>
+                        <button id="sortYearOld" class="sort-btn" title="Oldest">📅↑</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="loading-container hidden">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Loading amazing content...</p>
+    </div>
+
+    <!-- Results Section -->
+    <section class="results-section">
+        <div class="container mx-auto px-6">
+            <div id="resultsHeader" class="results-header hidden">
+                <h2 class="section-title">Search Results</h2>
+                <p id="resultsCount" class="results-count"></p>
+            </div>
+
+            <div id="results" class="movie-grid">
+                <!-- Movie cards will be inserted here -->
+            </div>
+
+            <div id="noResults" class="no-results hidden">
+                <svg width="100" height="100" fill="currentColor" viewBox="0 0 20 20" opacity="0.3">
+                    <path fill-rule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clip-rule="evenodd" />
+                </svg>
+                <h3>No movies found</h3>
+                <p>Try adjusting your search or filters</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Popular Movies Section (Optional - for when no search) -->
+    <section id="popularSection" class="popular-section">
+        <div class="container mx-auto px-6">
+            <h2 class="section-title">Trending Now</h2>
+            <div id="popularMovies" class="movie-grid">
+                <!-- Popular movies will load here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container mx-auto px-6 py-8">
+            <div class="footer-content">
+                <p class="text-gray-400">© 2026 MovieFinder. Made with ❤️ by Achintya Sharma</p>
+                <div class="footer-links">
+                    <a href="#">About</a>
+                    <a href="#">API</a>
+                    <a href="#">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/app.js"></script>
 </body>
+
 </html>
