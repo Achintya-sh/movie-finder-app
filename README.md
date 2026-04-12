@@ -1,5 +1,7 @@
 # 🎬 Movie Finder
 
+**Live Demo:** [View Project on Vercel](https://movie-finder-app-seven.vercel.app/)
+
 A high-performance, dynamic web application that allows users to search, filter, and save movies using real-time data from the OMDb API.
 
 ## 📖 Project Overview
