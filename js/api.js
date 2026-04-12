@@ -1,21 +1,19 @@
 // API INTEGRATION - OMDb API
 
-async function searchMovies(searchTerm) {
+async function searchMoviesPage(searchTerm, page = 1, type = '', year = '') {
     try {
-        const url = `${BASE_URL}?s=${encodeURIComponent(searchTerm)}&apikey=${API_KEY}`;
+        let url = `${BASE_URL}?s=${encodeURIComponent(searchTerm)}&page=${page}&apikey=${API_KEY}`;
+        if (type && type !== 'all') url += `&type=${type}`;
+        if (year) url += `&y=${year}`;
+
         const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
-        
-        if (data.Response === "True") {
-            return data.Search || [];
+
+        if (data.Response === 'True') {
+            return { movies: data.Search || [], total: parseInt(data.totalResults) || 0 };
         } else {
-            console.warn('API returned no results:', data.Error);
-            return [];
+            return { movies: [], total: 0 };
         }
     } catch (error) {
         console.error('Error fetching movies:', error);
@@ -27,53 +25,11 @@ async function getMovieDetails(imdbID) {
     try {
         const url = `${BASE_URL}?i=${imdbID}&apikey=${API_KEY}`;
         const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
-        
-        if (data.Response === "True") {
-            return data;
-        } else {
-            console.warn('API returned no details:', data.Error);
-            return null;
-        }
+        return data.Response === 'True' ? data : null;
     } catch (error) {
         console.error('Error fetching movie details:', error);
-        throw error;
-    }
-}
-
-
-async function searchMoviesWithFilters(searchTerm, type = '', year = '') {
-    try {
-        let url = `${BASE_URL}?s=${encodeURIComponent(searchTerm)}&apikey=${API_KEY}`;
-        
-        if (type && type !== 'all') {
-            url += `&type=${type}`;
-        }
-        
-        if (year) {
-            url += `&y=${year}`;
-        }
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.Response === "True") {
-            return data.Search || [];
-        } else {
-            return [];
-        }
-    } catch (error) {
-        console.error('Error fetching filtered movies:', error);
         throw error;
     }
 }

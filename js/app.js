@@ -1,381 +1,256 @@
 // MOVIE FINDER - MAIN APPLICATION
 
-// DOM Elements
-const searchInput = document.getElementById('searchInput');
-const resultsContainer = document.getElementById('results');
-const loadingIndicator = document.getElementById('loading');
-const typeFilter = document.getElementById('typeFilter');
-const yearFilter = document.getElementById('yearFilter');
-const themeToggle = document.getElementById('themeToggle');
-const navbar = document.querySelector('.navbar');
-const resultsHeader = document.getElementById('resultsHeader');
-const resultsCount = document.getElementById('resultsCount');
-const noResults = document.getElementById('noResults');
-const popularSection = document.getElementById('popularSection');
+const searchInput   = document.getElementById('searchInput');
+const searchBtn     = document.getElementById('searchBtn');
+const typeFilter    = document.getElementById('typeFilter');
+const yearFilter    = document.getElementById('yearFilter');
+const genreFilter   = document.getElementById('genreFilter');
+const ratingFilter  = document.getElementById('ratingFilter');
+const orderBy       = document.getElementById('orderBy');
+const loadingEl     = document.getElementById('loading');
+const movieGrid     = document.getElementById('movieGrid');
+const noResults     = document.getElementById('noResults');
+const paginationTop = document.getElementById('paginationTop');
+const paginationBot = document.getElementById('paginationBottom');
+const navbar        = document.querySelector('.navbar');
 
 // State
-let allMovies = [];
-let currentSort = null;
+let currentPage   = 1;
+let totalResults  = 0;
+const PER_PAGE    = 10; // OMDb returns exactly 10 per page
 
-// INITIALIZE APP
-
+// ===== INIT =====
 window.addEventListener('DOMContentLoaded', () => {
-    loadThemePreference();
     setupEventListeners();
-    loadPopularMovies();
+    fetchAndRender();
 });
 
-// EVENT LISTENERS
-
+// ===== EVENTS =====
 function setupEventListeners() {
-    // Search input with debounce
-    let searchTimeout;
-    searchInput.addEventListener('input', (e) => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => handleSearch(e.target.value), 500);
+    let debounce;
+    const triggerSearch = () => { currentPage = 1; fetchAndRender(); };
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(triggerSearch, 600);
     });
+    searchBtn.addEventListener('click', triggerSearch);
+    searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') triggerSearch(); });
 
-    // Filters
-    typeFilter.addEventListener('change', updateDisplay);
-    yearFilter.addEventListener('input', updateDisplay);
+    // API-level filters — re-fetch
+    typeFilter.addEventListener('change', triggerSearch);
+    yearFilter.addEventListener('input',  () => { clearTimeout(debounce); debounce = setTimeout(triggerSearch, 600); });
 
-    // Sort buttons
-    document.getElementById('sortAZ').addEventListener('click', () => handleSort('az'));
-    document.getElementById('sortZA').addEventListener('click', () => handleSort('za'));
-    document.getElementById('sortYearNew').addEventListener('click', () => handleSort('year-new'));
-    document.getElementById('sortYearOld').addEventListener('click', () => handleSort('year-old'));
+    // Client-side filters — re-render current results
+    if (genreFilter)  genreFilter.addEventListener('change',  () => renderCards(getFilteredMovies()));
+    if (ratingFilter) ratingFilter.addEventListener('change', () => renderCards(getFilteredMovies()));
+    orderBy.addEventListener('change', () => renderCards(getFilteredMovies()));
 
-    // Theme toggle
-    themeToggle.addEventListener('click', toggleTheme);
-
-    // Navbar scroll effect
-    window.addEventListener('scroll', handleNavbarScroll);
+    window.addEventListener('scroll', () => {
+        navbar.style.background = '#000';
+    });
 }
 
-// SEARCH FUNCTIONALITY
+// ===== RAW RESULTS CACHE =====
+let rawMovies = [];
 
-async function handleSearch(searchTerm) {
-    searchTerm = searchTerm.trim();
+// ===== FETCH & RENDER =====
+async function fetchAndRender() {
+    const term = searchInput.value.trim() || 'movie';
+    const type = typeFilter.value !== 'all' ? typeFilter.value : '';
+    const year = yearFilter.value || '';
 
-    // If search is empty, show popular movies
-    if (searchTerm.length === 0) {
-        allMovies = [];
-        resultsContainer.innerHTML = '';
-        resultsHeader.classList.add('hidden');
-        noResults.classList.add('hidden');
-        popularSection.classList.remove('hidden');
-        return;
-    }
-
-    // Search requires at least 3 characters
-    if (searchTerm.length < 3) {
-        return;
-    }
-
-    // Hide popular section
-    popularSection.classList.add('hidden');
-
-    // Show loading
     showLoading();
 
     try {
-        // Fetch movies from API
-        allMovies = await searchMovies(searchTerm);
+        const { movies, total } = await searchMoviesPage(term, currentPage, type, year);
+        totalResults = total;
+        rawMovies    = movies;
 
-        // Hide loading
         hideLoading();
 
-        // Update display
-        updateDisplay();
-    } catch (error) {
-        console.error('Search error:', error);
+        if (movies.length === 0) {
+            renderPagination(0);
+            showNoResults();
+            return;
+        }
+
+        renderCards(getFilteredMovies());
+        renderPagination(Math.ceil(total / PER_PAGE));
+    } catch (e) {
+        console.error(e);
         hideLoading();
         showNoResults();
     }
 }
 
-// DISPLAY FUNCTIONS
+// Apply client-side genre / rating / sort on top of fetched results
+function getFilteredMovies() {
+    let movies = [...rawMovies];
 
-function updateDisplay() {
-    let filteredMovies = [...allMovies];
-
-    // Apply filters
-    const filters = {
-        type: typeFilter.value,
-        year: yearFilter.value
-    };
-
-    filteredMovies = applyFilters(filteredMovies, filters);
-
-    // Apply sorting if active
-    if (currentSort) {
-        filteredMovies = applySorting(filteredMovies, currentSort);
+    // Genre filter (OMDb search results don't include genre, but we try)
+    const genre = genreFilter ? genreFilter.value : 'all';
+    if (genre && genre !== 'all') {
+        movies = movies.filter(m => m.Genre && m.Genre.toLowerCase().includes(genre.toLowerCase()));
     }
 
-    // Display results
-    displayMovies(filteredMovies);
+    // Rating filter
+    const rating = ratingFilter ? ratingFilter.value : 'all';
+    if (rating && rating !== 'all') {
+        const minRating = parseFloat(rating.replace('+', ''));
+        movies = movies.filter(m => {
+            const r = parseFloat(m.imdbRating);
+            return !isNaN(r) && r >= minRating;
+        });
+    }
+
+    // Sort
+    const order = orderBy.value;
+    if (order === 'az')       movies.sort((a,b) => a.Title.localeCompare(b.Title));
+    if (order === 'za')       movies.sort((a,b) => b.Title.localeCompare(a.Title));
+    if (order === 'year-new') movies.sort((a,b) => (parseInt(b.Year)||0) - (parseInt(a.Year)||0));
+    if (order === 'year-old') movies.sort((a,b) => (parseInt(a.Year)||0) - (parseInt(b.Year)||0));
+
+    return movies;
 }
 
-function displayMovies(movies) {
-    resultsContainer.innerHTML = '';
-
-    if (movies.length === 0) {
-        showNoResults();
-        return;
-    }
-
-    // Show results header
-    resultsHeader.classList.remove('hidden');
+// ===== RENDER CARDS =====
+function renderCards(movies) {
+    movieGrid.innerHTML = '';
     noResults.classList.add('hidden');
-    resultsCount.textContent = `${movies.length} result${movies.length !== 1 ? 's' : ''} found`;
 
-    // Create movie cards using map() HOF
-    const movieCards = movies.map(movie => createMovieCard(movie));
-    movieCards.forEach(card => resultsContainer.appendChild(card));
+    if (movies.length === 0) { showNoResults(); return; }
 
-    // Add stagger animation
-    animateCards();
+    movies.forEach((m, i) => {
+        const card = createCard(m);
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(12px)';
+        movieGrid.appendChild(card);
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.28s ease, transform 0.28s ease';
+            card.style.opacity    = '1';
+            card.style.transform  = 'translateY(0)';
+        }, i * 30);
+    });
 }
 
-function createMovieCard(movie) {
-    const card = document.createElement('div');
-    card.className = 'movie-card';
-    
-    const isFavorite = checkIfFavorite(movie.imdbID);
-    const posterUrl = movie.Poster !== 'N/A' 
-        ? movie.Poster 
-        : 'https://via.placeholder.com/300x450/1a1a1a/ffffff?text=No+Poster';
+// ===== CARD =====
+function createCard(movie) {
+    const card   = document.createElement('div');
+    card.className = 'yts-card';
+
+    const fav    = checkIfFavorite(movie.imdbID);
+    const poster = movie.Poster && movie.Poster !== 'N/A'
+        ? movie.Poster
+        : `https://via.placeholder.com/300x450/141414/333?text=${encodeURIComponent(movie.Title)}`;
 
     card.innerHTML = `
-        <img 
-            src="${posterUrl}" 
-            alt="${movie.Title}"
-            class="movie-poster"
-            loading="lazy"
-        >
-        <div class="movie-info">
-            <h3 class="movie-title">${movie.Title}</h3>
-            <div class="movie-meta">
-                <span class="movie-year">${movie.Year}</span>
-                <span class="movie-type">${movie.Type}</span>
-            </div>
-            <div class="movie-actions">
-                <button 
-                    class="btn-favorite ${isFavorite ? 'active' : ''}"
-                    onclick="toggleFavorite('${movie.imdbID}', '${escapeHtml(movie.Title)}')"
-                >
-                    ${isFavorite ? '❤️' : '🤍'}
-                </button>
-                <button 
-                    class="btn-details"
-                    onclick="showMovieDetails('${movie.imdbID}')"
-                >
-                    Details
+        <div class="yts-poster-wrap">
+            <img src="${poster}" alt="${escapeHtml(movie.Title)}" class="yts-poster" loading="lazy">
+            <div class="yts-quality-badge"><span class="yts-quality-tag">HD</span></div>
+            <div class="yts-overlay">
+                <button class="yts-overlay-btn" onclick="showMovieDetails('${movie.imdbID}')">View Details</button>
+                <button class="yts-fav-overlay-btn" onclick="toggleFavorite('${movie.imdbID}', '${escapeHtml(movie.Title)}')">
+                    ${fav ? '❤️ Saved' : '🤍 Save'}
                 </button>
             </div>
         </div>
+        <div class="yts-info">
+            <div class="yts-title">${movie.Title}</div>
+            <div class="yts-year">${movie.Year || '—'}</div>
+        </div>
     `;
-
     return card;
 }
 
-// SORTING FUNCTIONS
+// ===== PAGINATION =====
+function renderPagination(totalPages) {
+    [paginationTop, paginationBot].forEach(el => {
+        el.innerHTML = '';
+        if (totalPages <= 1) return;
 
-function handleSort(sortType) {
-    currentSort = sortType;
-    
-    // Update active state on buttons
-    document.querySelectorAll('.sort-btn').forEach(btn => {
-        btn.classList.remove('active');
+        const pages = buildPageNumbers(totalPages, currentPage);
+        if (currentPage > 1) el.appendChild(makePageBtn('«', currentPage - 1));
+        pages.forEach(p => {
+            if (p === '...') {
+                const s = document.createElement('span');
+                s.textContent = '...';
+                s.style.cssText = 'color:#555;padding:0 6px;line-height:36px;font-size:.85rem;';
+                el.appendChild(s);
+            } else {
+                el.appendChild(makePageBtn(p, p, p === currentPage));
+            }
+        });
+        if (currentPage < totalPages) el.appendChild(makePageBtn('»', currentPage + 1));
     });
-    
-    const btnMap = {
-        'az': 'sortAZ',
-        'za': 'sortZA',
-        'year-new': 'sortYearNew',
-        'year-old': 'sortYearOld'
-    };
-    
-    document.getElementById(btnMap[sortType])?.classList.add('active');
-    
-    updateDisplay();
 }
 
-function applySorting(movies, sortType) {
-    switch(sortType) {
-        case 'az':
-            return sortAZ(movies);
-        case 'za':
-            return sortZA(movies);
-        case 'year-new':
-            return sortByYearNew(movies);
-        case 'year-old':
-            return sortByYearOld(movies);
-        default:
-            return movies;
-    }
+function makePageBtn(label, page, active = false) {
+    const b = document.createElement('button');
+    b.className = 'pg-btn' + (active ? ' active' : '');
+    b.textContent = label;
+    b.addEventListener('click', () => {
+        currentPage = page;
+        fetchAndRender();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    return b;
 }
 
-// FAVORITES FUNCTIONALITY
+function buildPageNumbers(total, current) {
+    if (total <= 11) return Array.from({length: total}, (_, i) => i + 1);
+    const pages = [];
+    const left  = Math.max(2, current - 2);
+    const right = Math.min(total - 1, current + 2);
+    pages.push(1);
+    if (left > 2) pages.push('...');
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < total - 1) pages.push('...');
+    pages.push(total);
+    return pages;
+}
 
+// ===== FAVOURITES =====
 function toggleFavorite(imdbID, title) {
-    let favorites = getFavorites();
-    
-    const index = favorites.findIndex(fav => fav.imdbID === imdbID);
-    
-    if (index > -1) {
-        // Remove from favorites using filter() HOF
-        favorites = favorites.filter(fav => fav.imdbID !== imdbID);
-    } else {
-        // Add to favorites
-        favorites.push({ imdbID, title });
-    }
-    
-    saveFavorites(favorites);
-    updateDisplay(); // Refresh display to update button states
+    let favs = getFavorites();
+    const idx = favs.findIndex(f => f.imdbID === imdbID);
+    if (idx > -1) favs = favs.filter(f => f.imdbID !== imdbID);
+    else favs.push({ imdbID, title });
+    localStorage.setItem('movieFavorites', JSON.stringify(favs));
+    renderCards(getFilteredMovies());
 }
 
 function checkIfFavorite(imdbID) {
-    const favorites = getFavorites();
-    return favorites.some(fav => fav.imdbID === imdbID); // Using some() HOF
+    return getFavorites().some(f => f.imdbID === imdbID);
 }
 
 function getFavorites() {
-    const favoritesJson = localStorage.getItem('movieFavorites');
-    return favoritesJson ? JSON.parse(favoritesJson) : [];
+    try { return JSON.parse(localStorage.getItem('movieFavorites')) || []; }
+    catch { return []; }
 }
 
-function saveFavorites(favorites) {
-    localStorage.setItem('movieFavorites', JSON.stringify(favorites));
-}
-
-// MOVIE DETAILS
-
+// ===== DETAILS =====
 async function showMovieDetails(imdbID) {
-    // This is a placeholder 
-    alert(`Fetching details for movie ID: ${imdbID}\n\nYou can expand this to show a beautiful modal with full movie information!`);
-    
-    // Example of how to fetch details:
-    // const details = await getMovieDetails(imdbID);c
-    // displayDetailsModal(details);
+    alert(`Movie details for: ${imdbID}\n\nExpand this to show a modal with full info!`);
 }
 
-// POPULAR MOVIES (Default View)
-
-async function loadPopularMovies() {
-    const popularSearches = ['Avengers', 'Batman', 'Star Wars'];
-    const randomSearch = popularSearches[Math.floor(Math.random() * popularSearches.length)];
-    
-    try {
-        const movies = await searchMovies(randomSearch);
-        displayPopularMovies(movies.slice(0, 8)); // Show first 8 results
-    } catch (error) {
-        console.error('Error loading popular movies:', error);
-    }
-}
-
-function displayPopularMovies(movies) {
-    const popularContainer = document.getElementById('popularMovies');
-    popularContainer.innerHTML = '';
-    
-    movies.forEach(movie => {
-        const card = createMovieCard(movie);
-        popularContainer.appendChild(card);
-    });
-}
-
-// THEME TOGGLE
-
-function toggleTheme() {
-    const body = document.body;
-    const sunIcon = themeToggle.querySelector('.sun-icon');
-    const moonIcon = themeToggle.querySelector('.moon-icon');
-    
-    body.classList.toggle('light-mode');
-    
-    if (body.classList.contains('light-mode')) {
-        sunIcon.classList.add('hidden');
-        moonIcon.classList.remove('hidden');
-        localStorage.setItem('theme', 'light');
-    } else {
-        sunIcon.classList.remove('hidden');
-        moonIcon.classList.add('hidden');
-        localStorage.setItem('theme', 'dark');
-    }
-}
-
-function loadThemePreference() {
-    const savedTheme = localStorage.getItem('theme');
-    const sunIcon = themeToggle.querySelector('.sun-icon');
-    const moonIcon = themeToggle.querySelector('.moon-icon');
-    
-    if (savedTheme === 'light') {
-        document.body.classList.add('light-mode');
-        sunIcon.classList.add('hidden');
-        moonIcon.classList.remove('hidden');
-    }
-}
-
-// NAVBAR SCROLL EFFECT
-
-function handleNavbarScroll() {
-    if (window.scrollY > 100) {
-        navbar.classList.add('scrolled');
-    } else {
-        navbar.classList.remove('scrolled');
-    }
-}
-
-// LOADING STATES
-
+// ===== LOADING =====
 function showLoading() {
-    loadingIndicator.classList.remove('hidden');
-    resultsHeader.classList.add('hidden');
-    resultsContainer.innerHTML = '';
+    loadingEl.classList.remove('hidden');
+    movieGrid.innerHTML   = '';
     noResults.classList.add('hidden');
+    paginationTop.innerHTML = '';
+    paginationBot.innerHTML = '';
 }
+function hideLoading()   { loadingEl.classList.add('hidden'); }
+function showNoResults() { noResults.classList.remove('hidden'); }
 
-function hideLoading() {
-    loadingIndicator.classList.add('hidden');
-}
-
-function showNoResults() {
-    resultsHeader.classList.add('hidden');
-    resultsContainer.innerHTML = '';
-    noResults.classList.remove('hidden');
-}
-
-// ANIMATIONS
-
-function animateCards() {
-    const cards = document.querySelectorAll('.movie-card');
-    cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        
-        setTimeout(() => {
-            card.style.transition = 'all 0.5s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 50); // Stagger animation
-    });
-}
-
-// UTILITY FUNCTIONS
-
+// ===== UTILS =====
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
 }
 
-// ERROR HANDLING
-
-window.addEventListener('error', (e) => {
-    console.error('Application error:', e);
-});
-
-// Prevent errors from breaking the app
-window.addEventListener('unhandledrejection', (e) => {
-    console.error('Unhandled promise rejection:', e);
-});
+window.addEventListener('error', e => console.error('App error:', e));
+window.addEventListener('unhandledrejection', e => console.error('Unhandled:', e));
