@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,8 +8,10 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
 
     <nav class="navbar">
@@ -46,7 +49,9 @@
                 </div>
                 <div class="yts-filter-group">
                     <label>Year:</label>
-                    <input type="number" id="yearFilter" placeholder="All" class="yts-select yts-year-input">
+                    <select id="yearFilter" class="yts-select">
+                        <option value="all">All Years</option>
+                    </select>
                 </div>
                 <div class="yts-filter-group">
                     <label>Order By:</label>
@@ -73,7 +78,9 @@
             <div id="movieGrid" class="yts-movie-grid"></div>
             <div id="noResults" class="no-results hidden">
                 <svg width="80" height="80" fill="currentColor" viewBox="0 0 20 20" opacity="0.3">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    <path fill-rule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clip-rule="evenodd" />
                 </svg>
                 <h3>No movies found</h3>
                 <p>Try adjusting your search or filters</p>
@@ -98,4 +105,5 @@
     <script src="js/utils.js"></script>
     <script src="js/app.js"></script>
 </body>
+
 </html>

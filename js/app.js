@@ -23,6 +23,7 @@ const PER_PAGE    = 10; // OMDb returns exactly 10 per page
 window.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     fetchAndRender();
+
 });
 
 // ===== EVENTS =====
@@ -251,6 +252,17 @@ function escapeHtml(text) {
     d.textContent = text;
     return d.innerHTML;
 }
+// ===== YEAR DROPDOWN =====
 
+const currentYear = new Date().getFullYear();
+for (let y = currentYear; y >= 1944; y--) {
+    const o = document.createElement('option');
+    o.value = y;
+    o.textContent = y;
+    yearFilter.appendChild(o);
+}
+
+
+// ===== ERROR HANDLING =====
 window.addEventListener('error', e => console.error('App error:', e));
 window.addEventListener('unhandledrejection', e => console.error('Unhandled:', e));
